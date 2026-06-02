@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox 
 from PIL import Image, ImageTk
 from fpdf import FPDF
 import json
