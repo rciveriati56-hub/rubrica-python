@@ -5,6 +5,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # Forza la chiusura se supera i 15 minuti
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -15,38 +16,34 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Configura e installa Flet
+      - name: Installa Flet senza interazione
         run: |
           python -m pip install --upgrade pip
-          pip install flet
-          flutter config --no-analytics
+          pip install --no-cache-dir flet
 
-      - name: Compila APK Android con Flet
+      - name: Configura Licenze Android pre-compilazione
         run: |
-          flet build apk --verbose --yes
+          yes | sdkmanager --licenses || true
 
-      - name: Trova e Allinea APK (ZipAlign)
+      - name: Compila APK Android (Modalità Silenziosa)
+        run: |
+          # Usiamo l'ambiente headless per evitare prompt invisibili
+          export CI=true
+          flet build apk --no-android-licenses-check --yes
+
+      - name: Allinea e Firma APK
         run: |
           APK_PATH=$(find build/apk/ -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then echo "APK non trovato"; exit 1; fi
           sudo apt-get update && sudo apt-get install -y android-sdk-build-tools
-          # Cerca l'eseguibile zipalign installato nel sistema cloud
           ZIPALIGN_BIN=$(find /usr/lib/android-sdk/build-tools/ -name zipalign | head -n 1)
           $ZIPALIGN_BIN -v 4 "$APK_PATH" app-aligned.apk
-
-      - name: Genera Chiave temporanea e Firma APK (ApkSigner)
-        run: |
-          # Crea una firma digitale fittizia di debug per sbloccare Android
+          
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           APKSIGNER_BIN=$(find /usr/lib/android-sdk/build-tools/ -name apksigner | head -n 1)
           $APKSIGNER_BIN sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out app-final-signed.apk app-aligned.apk
