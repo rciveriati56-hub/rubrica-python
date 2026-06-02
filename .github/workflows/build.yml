@@ -1,6 +1,6 @@
 name: Build Android APK
 on:
-  workflow_dispatch: # Ti permette di avviare il processo con un pulsante
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,9 +16,9 @@ jobs:
 
       - name: Install Flet and dependencies
         run: |
-          pip install -r requirements.txt
+          pip install flet
 
-      - name: Setup Java (Richiesto per Android)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -26,10 +26,4 @@ jobs:
 
       - name: Build APK
         run: |
-          flet build apk
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: build/apk/*.apk
+          flet build apk rubrica.py
