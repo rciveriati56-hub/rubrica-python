@@ -9,13 +9,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Linux Dependencies (Richieste da Flet)
+        run: |
+          sudo apt update
+          sudo apt-get install -y --no-install-recommends \
+            clang ninja-build libgtk-3-dev libasound2-dev libmpv-dev mpv \
+            pkg-config libsecret-1-0 libsecret-1-dev
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Flutter SDK (Necessario per Flet)
+      - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -32,3 +39,9 @@ jobs:
       - name: Build APK
         run: |
           flet build apk rubrica.py
+
+      - name: Carica l'APK finale nei risultati
+        uses: actions/upload-artifact@v4
+        with:
+          name: rubrica-android-apk
+          path: build/apk/*.apk
