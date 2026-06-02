@@ -1,0 +1,55 @@
+name: Build Android APK Signed
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # Forza la chiusura se supera i 15 minuti
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installa Flet senza interazione
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir flet
+
+      - name: Configura Licenze Android pre-compilazione
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Compila APK Android (Modalità Silenziosa)
+        run: |
+          # Usiamo l'ambiente headless per evitare prompt invisibili
+          export CI=true
+          flet build apk --no-android-licenses-check --yes
+
+      - name: Allinea e Firma APK
+        run: |
+          APK_PATH=$(find build/apk/ -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then echo "APK non trovato"; exit 1; fi
+          sudo apt-get update && sudo apt-get install -y android-sdk-build-tools
+          ZIPALIGN_BIN=$(find /usr/lib/android-sdk/build-tools/ -name zipalign | head -n 1)
+          $ZIPALIGN_BIN -v 4 "$APK_PATH" app-aligned.apk
+          
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          APKSIGNER_BIN=$(find /usr/lib/android-sdk/build-tools/ -name apksigner | head -n 1)
+          $APKSIGNER_BIN sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out app-final-signed.apk app-aligned.apk
+          
+      - name: Carica l'APK Firmato nei risultati
+        uses: actions/upload-artifact@v4
+        with:
+          name: rubrica-android-firmato
+          path: app-final-signed.apk
