@@ -9,7 +9,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Linux Dependencies (Richieste da Flet)
+      - name: Install Linux Dependencies
         run: |
           sudo apt update
           sudo apt-get install -y --no-install-recommends \
@@ -36,11 +36,12 @@ jobs:
         run: |
           pip install flet
 
-      - name: Build APK
+      - name: Build APK (con log dettagliato)
         run: |
-          flet build apk rubrica.py
+          flet build apk rubrica.py --verbose
 
       - name: Carica l'APK finale nei risultati
+        if: always() # Esegue il caricamento anche se trova file parziali
         uses: actions/upload-artifact@v4
         with:
           name: rubrica-android-apk
