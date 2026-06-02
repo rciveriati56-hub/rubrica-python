@@ -9,13 +9,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Linux Dependencies
-        run: |
-          sudo apt update
-          sudo apt-get install -y --no-install-recommends \
-            clang ninja-build libgtk-3-dev libasound2-dev libmpv-dev mpv \
-            pkg-config libsecret-1-0 libsecret-1-dev
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -30,18 +23,23 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: Install Flet
+      - name: Install Flet e strumenti di build
         run: |
+          pip install --upgrade pip
           pip install flet
 
-      - name: Build APK (con log dettagliato)
+      - name: Accetta licenze Android SDK
         run: |
-          flet build apk rubrica.py --verbose
+          yes | sdkmanager --licenses || true
+
+      - name: Compila APK Android
+        run: |
+          flet build apk --verbose
 
       - name: Carica l'APK finale nei risultati
-        if: always() # Esegue il caricamento anche se trova file parziali
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rubrica-android-apk
