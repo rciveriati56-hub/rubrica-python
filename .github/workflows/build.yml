@@ -1,10 +1,6 @@
-name: Build Android APK
+name: Build Android APK Signed
 on:
   workflow_dispatch:
-
-env:
-  PYTHONUTF8: 1
-  FLET_CLI_NO_RICH_OUTPUT: 1
 
 jobs:
   build:
@@ -35,13 +31,28 @@ jobs:
           pip install flet
           flutter config --no-analytics
 
-      - name: Compila APK Android
+      - name: Compila APK Android con Flet
         run: |
           flet build apk --verbose --yes
 
-      - name: Carica l'APK finale nei risultati
-        if: always()
+      - name: Trova e Allinea APK (ZipAlign)
+        run: |
+          APK_PATH=$(find build/apk/ -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then echo "APK non trovato"; exit 1; fi
+          sudo apt-get update && sudo apt-get install -y android-sdk-build-tools
+          # Cerca l'eseguibile zipalign installato nel sistema cloud
+          ZIPALIGN_BIN=$(find /usr/lib/android-sdk/build-tools/ -name zipalign | head -n 1)
+          $ZIPALIGN_BIN -v 4 "$APK_PATH" app-aligned.apk
+
+      - name: Genera Chiave temporanea e Firma APK (ApkSigner)
+        run: |
+          # Crea una firma digitale fittizia di debug per sbloccare Android
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          APKSIGNER_BIN=$(find /usr/lib/android-sdk/build-tools/ -name apksigner | head -n 1)
+          $APKSIGNER_BIN sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out app-final-signed.apk app-aligned.apk
+          
+      - name: Carica l'APK Firmato nei risultati
         uses: actions/upload-artifact@v4
         with:
-          name: rubrica-android-apk
-          path: build/apk/*.apk
+          name: rubrica-android-firmato
+          path: app-final-signed.apk
