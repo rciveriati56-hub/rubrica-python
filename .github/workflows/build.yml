@@ -2,6 +2,10 @@ name: Build Android APK
 on:
   workflow_dispatch:
 
+env:
+  PYTHONUTF8: 1
+  FLET_CLI_NO_RICH_OUTPUT: 1
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,10 +16,10 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter SDK
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -23,20 +27,17 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: Install Flet e strumenti di build
+      - name: Configura e installa Flet
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install flet
-
-      - name: Accetta licenze Android SDK
-        run: |
-          yes | sdkmanager --licenses || true
+          flutter config --no-analytics
 
       - name: Compila APK Android
         run: |
-          flet build apk --verbose
+          flet build apk --verbose --yes
 
       - name: Carica l'APK finale nei risultati
         if: always()
